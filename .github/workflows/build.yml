@@ -1,5 +1,5 @@
-# Every push to main is tested and built. A release tag also publishes the DMG on GitHub;
-# Scripts/release.sh creates those tags. Signing and notarization turn on when their secrets exist.
+# Every push to main is tested and built. A release tag also signs, notarizes and publishes the
+# DMG through Debut; Scripts/release.sh creates those tags.
 name: Build and release
 
 on:
@@ -14,72 +14,30 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
-    # At job level: a step's `if` can't see that same step's env.
-    env:
-      MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
-      MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
-      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
-      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # release notes list the commits since the previous tag
 
       - name: Show toolchain
         run: swift --version && xcodebuild -version
 
-      - name: Check the tag matches the app version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Packaging/Kinetic-Info.plist)
-          if [[ "${GITHUB_REF_NAME#v}" != "$VERSION" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match app version $VERSION. Use Scripts/release.sh."
-            exit 1
-          fi
-
-      - name: Import signing certificate (optional)
-        if: ${{ env.MAC_CERT_P12 != '' }}
-        run: |
-          CERT="$RUNNER_TEMP/cert.p12"
-          trap 'rm -f "$CERT"' EXIT
-          echo "$MAC_CERT_P12" | base64 --decode > "$CERT"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security list-keychains -d user -s build.keychain login.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security import "$CERT" -k build.keychain -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          echo "SIGN_ID=$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | sed -E 's/.*"(.+)"/\1/')" >> "$GITHUB_ENV"
-
-      - name: Store notarization credentials (optional)
-        if: ${{ env.MAC_CERT_P12 != '' && env.NOTARY_APPLE_ID != '' }}
-        run: |
-          xcrun notarytool store-credentials kinetic \
-            --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
-          echo "NOTARY_PROFILE=kinetic" >> "$GITHUB_ENV"
-
       - name: Run tests
         run: swift test
 
-      - name: Build DMG
-        env:
-          SIGN_ID: ${{ env.SIGN_ID || '-' }}
-        run: ./make-dmg.sh
+      - name: Build
+        run: ./build.sh release
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Kinetic-dmg
-          path: build/Kinetic.dmg
-
-      - name: Publish release
+      - name: Read the version from the tag
         if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          export NOTARIZED="${NOTARY_PROFILE:-}"
-          Scripts/release-notes.sh body "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
-          gh release create "$GITHUB_REF_NAME" build/Kinetic.dmg \
-            --title "$(Scripts/release-notes.sh title "$GITHUB_REF_NAME")" \
-            --notes-file "$RUNNER_TEMP/notes.md"
+        id: tag
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: andretmarques/debut@1033b462c4570f9a3f342b8bb2913e5c59b5112c # v0.1.1
+        with:
+          version: ${{ steps.tag.outputs.version }}
+          key-id: ${{ secrets.DEBUT_KEY_ID }}
+          issuer-id: ${{ secrets.DEBUT_ISSUER_ID }}
+          key: ${{ secrets.DEBUT_KEY }}
+          certificate: ${{ secrets.DEBUT_CERT_P12 }}
+          certificate-password: ${{ secrets.DEBUT_CERT_PASSWORD }}
