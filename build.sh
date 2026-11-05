@@ -65,6 +65,7 @@ cp Packaging/Kinetic-Info.plist "$APP/Contents/Info.plist"
 cp Packaging/KineticAgent-Info.plist "$AGENT/Contents/Info.plist"
 cp Packaging/com.andremarques.kinetic.agent.plist "$APP/Contents/Library/LaunchAgents/"
 cp Packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp Packaging/AppIcon.icns "$AGENT/Contents/Resources/AppIcon.icns"
 echo -n "APPL????" > "$APP/Contents/PkgInfo"
 echo -n "APPL????" > "$AGENT/Contents/PkgInfo"
 

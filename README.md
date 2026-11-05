@@ -36,7 +36,7 @@ Kinetic fixes all of that in a few clicks. No rules to write and no drivers to i
 | **~5 MB** | with the icon off, measured just after starting |
 | **0%** | CPU while idle |
 | **0** | drivers or system extensions |
-| **10 MB** | for the whole app |
+| **~12 MB** | for the whole app |
 
 The settings window closes completely when you're done. All that stays is one small background process that does nothing until you scroll, click or press a key.
 
