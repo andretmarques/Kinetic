@@ -4,6 +4,7 @@ import Darwin
 /// Moving the app to another folder, or replacing it with a new version, doesn't count.
 public struct AppRemovalCheck: Sendable {
     private let launchPath: String?
+    private var lastSampleWasRemoved = false
 
     public init() {
         launchPath = Self.currentExecutablePath()
@@ -11,6 +12,17 @@ public struct AppRemovalCheck: Sendable {
 
     public var isAppRemoved: Bool {
         Self.isRemoved(launchPath: launchPath, currentPath: Self.currentExecutablePath()) { access($0, F_OK) == 0 }
+    }
+
+    /// Replacing the app removes the old copy a moment before the new one is in place, so one sample can be wrong.
+    /// shortcut: the 10 s timer's tolerance can put two samples about 5 s apart, so a slower replace still counts as removal; sample faster or compare bundle versions if that shows up.
+    public mutating func isConfirmedRemoved() -> Bool {
+        confirm(isAppRemoved)
+    }
+
+    mutating func confirm(_ sample: Bool) -> Bool {
+        defer { lastSampleWasRemoved = sample }
+        return sample && lastSampleWasRemoved
     }
 
     static func isRemoved(launchPath: String?, currentPath: String?, fileExists: (String) -> Bool) -> Bool {

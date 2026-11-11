@@ -181,6 +181,23 @@ import Testing
         #expect(effects == [.repairAgent(mayRelaunch: true, mayRegister: true)])
     }
 
+    @Test func aFailedRelaunchAllowsAnotherRepair() {
+        var state = SettingsState(config: KineticConfig(), status: AgentStatus())
+        for _ in 1...3 {
+            _ = observeDown(&state)
+        }
+        _ = SettingsReducer.reduce(&state, .repairFinished(didRegister: true))
+        for _ in 1...3 {
+            _ = observeDown(&state)
+        }
+        _ = SettingsReducer.reduce(&state, .repairFinished(didRegister: false))
+        for _ in 1...2 {
+            _ = observeDown(&state)
+        }
+        #expect(observeDown(&state) == [.repairAgent(mayRelaunch: true, mayRegister: true)])
+        #expect(state.recovery.registrations == 1)
+    }
+
     @Test func onlyOneRepairRunsAtATime() {
         var state = SettingsState(config: KineticConfig(), status: AgentStatus())
         for _ in 1...3 {
