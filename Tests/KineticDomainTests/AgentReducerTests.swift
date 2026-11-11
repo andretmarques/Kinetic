@@ -101,6 +101,60 @@ import Testing
         #expect(state.config.mice["*"]?.pointer.speed == 10)
     }
 
+    private func twoProfiledMice(acceleration: [AccelerationMode]) -> (AgentState, [DeviceInfo]) {
+        let mice = (2...4).map {
+            DeviceInfo(kind: .mouse, vendorID: 1, productID: $0, name: "M\($0)", isApple: false, isBuiltIn: false)
+        }
+        var config = KineticConfig()
+        for (mouse, mode) in zip(mice, acceleration) {
+            var profile = MouseProfile()
+            profile.pointer.acceleration = mode
+            config.mice[mouse.key] = profile
+        }
+        var state = AgentState(config: config)
+        _ = AgentReducer.reduce(&state, .devicesChanged(mice))
+        return (state, mice)
+    }
+
+    @Test func menuSpeedReachesEveryConnectedProfile() {
+        var (state, mice) = twoProfiledMice(acceleration: [.system, .system])
+        let unattached = DeviceInfo.key(kind: .mouse, vendorID: 9, productID: 9)
+        state.config.mice[unattached] = MouseProfile()
+        _ = AgentReducer.reduce(&state, .menu(.setPointerSpeed(4)))
+        #expect(state.config.mice["*"]?.pointer.speed == 4)
+        #expect(state.config.mice[mice[0].key]?.pointer.speed == 4)
+        #expect(state.config.mice[mice[1].key]?.pointer.speed == 4)
+        #expect(state.config.mice[mice[2].key] == nil)
+        #expect(state.config.mice[unattached]?.pointer.speed == 10)
+    }
+
+    @Test func menuAccelerationTurnsAllConnectedProfilesOff() {
+        var (state, mice) = twoProfiledMice(acceleration: [.system, .system])
+        _ = AgentReducer.reduce(&state, .menu(.toggleAcceleration))
+        #expect(state.config.mice["*"]?.pointer.acceleration == .off)
+        #expect(state.config.mice[mice[0].key]?.pointer.acceleration == .off)
+        #expect(state.config.mice[mice[1].key]?.pointer.acceleration == .off)
+    }
+
+    @Test func menuAccelerationTurnsAllConnectedProfilesOnTogether() {
+        var (state, mice) = twoProfiledMice(acceleration: [.off, .system])
+        state.config.mice["*"] = MouseProfile(pointer: PointerSettings(acceleration: .off))
+        _ = AgentReducer.reduce(&state, .menu(.toggleAcceleration))
+        #expect(state.config.mice["*"]?.pointer.acceleration == .system)
+        #expect(state.config.mice[mice[0].key]?.pointer.acceleration == .system)
+        #expect(state.config.mice[mice[1].key]?.pointer.acceleration == .system)
+    }
+
+    @Test func customSurvivesTheAccelerationToggle() {
+        var config = KineticConfig()
+        config.mice["*"] = MouseProfile(pointer: PointerSettings(acceleration: .custom, curve: 0.9))
+        var state = AgentState(config: config)
+        _ = AgentReducer.reduce(&state, .menu(.toggleAcceleration))
+        #expect(state.config.mice["*"]?.pointer.acceleration == .off)
+        _ = AgentReducer.reduce(&state, .menu(.toggleAcceleration))
+        #expect(state.config.mice["*"]?.pointer.acceleration == .custom)
+    }
+
     @Test func menuModelDescribesTheState() {
         var state = AgentState(config: KineticConfig())
         _ = AgentReducer.reduce(&state, .menu(.toggleAcceleration))
