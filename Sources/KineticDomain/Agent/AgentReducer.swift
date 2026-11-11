@@ -107,9 +107,9 @@ public enum AgentReducer: Reducer {
 
         switch command {
         case .togglePause:
-            return edit(&state, .setPaused(!state.config.paused))
+            return edit(&state, [.setPaused(!state.config.paused)])
         case .toggleReverseScroll:
-            return edit(&state, .setReverseVertical(mouse: mouse, !profile.scroll.reverseVertical))
+            return edit(&state, [.setReverseVertical(mouse: mouse, !profile.scroll.reverseVertical)])
         case .toggleAcceleration:
             let turnsOn = profile.pointer.acceleration == .off
             return edit(&state, state.pointerMouseKeys.map { key in
@@ -117,7 +117,7 @@ public enum AgentReducer: Reducer {
             })
         case .toggleFunctionKeys:
             let mode: FKeyMode = state.config.keyboard.fKeyMode == .mac ? .standard : .mac
-            return edit(&state, .setFKeyMode(mode))
+            return edit(&state, [.setFKeyMode(mode)])
         case let .setPointerSpeed(speed):
             return edit(&state, state.pointerMouseKeys.map { .setPointerSpeed(mouse: $0, speed) })
         case .openSettings:
@@ -127,17 +127,13 @@ public enum AgentReducer: Reducer {
         }
     }
 
-    private static func edit(_ state: inout AgentState, _ edit: ConfigEdit) -> [AgentEffect] {
-        self.edit(&state, [edit])
-    }
-
     private static func edit(_ state: inout AgentState, _ edits: [ConfigEdit]) -> [AgentEffect] {
         edits.forEach { $0.apply(to: &state.config) }
         return edits.map(AgentEffect.persist) + [apply(state, force: false), .renderMenu]
     }
 
     /// The config doesn't keep the mode from before "off", but the curve only moves in Custom mode.
-    // shortcut: a profile set back to macOS after moving the curve returns as Custom; store the last mode if users notice.
+    // shortcut: a macOS-mode profile whose curve was moved comes back as Custom, and a Custom profile at the default curve comes back as macOS; store the last mode if users notice.
     private static func onMode(_ pointer: PointerSettings) -> AccelerationMode {
         guard pointer.acceleration == .off else { return pointer.acceleration }
         return pointer.curve == PointerSettings().curve ? .system : .custom
