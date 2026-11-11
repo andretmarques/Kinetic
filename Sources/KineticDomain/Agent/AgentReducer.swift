@@ -28,6 +28,13 @@ public struct AgentState: Equatable, Sendable {
     public var activeMouseKey: String {
         config.activeMouseProfileKey(devices: devices)
     }
+
+    /// Pointer settings apply per mouse, so with several mice a menu change also reaches each connected one with its own profile.
+    public var pointerMouseKeys: [String] {
+        guard activeMouseKey == KineticConfig.allMiceKey else { return [activeMouseKey] }
+        let profiled = devices.filter { $0.kind == .mouse && config.isEnabled($0) && config.mice[$0.key] != nil }
+        return [KineticConfig.allMiceKey] + profiled.map(\.key)
+    }
 }
 
 public enum AgentIntent: Sendable {
@@ -100,17 +107,19 @@ public enum AgentReducer: Reducer {
 
         switch command {
         case .togglePause:
-            return edit(&state, .setPaused(!state.config.paused))
+            return edit(&state, [.setPaused(!state.config.paused)])
         case .toggleReverseScroll:
-            return edit(&state, .setReverseVertical(mouse: mouse, !profile.scroll.reverseVertical))
+            return edit(&state, [.setReverseVertical(mouse: mouse, !profile.scroll.reverseVertical)])
         case .toggleAcceleration:
-            let mode: AccelerationMode = profile.pointer.acceleration == .off ? .system : .off
-            return edit(&state, .setAcceleration(mouse: mouse, mode))
+            let turnsOn = profile.pointer.acceleration == .off
+            return edit(&state, state.pointerMouseKeys.map { key in
+                .setAcceleration(mouse: key, turnsOn ? onMode(state.config.mouseProfile(for: key).pointer) : .off)
+            })
         case .toggleFunctionKeys:
             let mode: FKeyMode = state.config.keyboard.fKeyMode == .mac ? .standard : .mac
-            return edit(&state, .setFKeyMode(mode))
+            return edit(&state, [.setFKeyMode(mode)])
         case let .setPointerSpeed(speed):
-            return edit(&state, .setPointerSpeed(mouse: mouse, speed))
+            return edit(&state, state.pointerMouseKeys.map { .setPointerSpeed(mouse: $0, speed) })
         case .openSettings:
             return [.openSettings]
         case .quit:
@@ -118,9 +127,16 @@ public enum AgentReducer: Reducer {
         }
     }
 
-    private static func edit(_ state: inout AgentState, _ edit: ConfigEdit) -> [AgentEffect] {
-        edit.apply(to: &state.config)
-        return [.persist(edit), apply(state, force: false), .renderMenu]
+    private static func edit(_ state: inout AgentState, _ edits: [ConfigEdit]) -> [AgentEffect] {
+        edits.forEach { $0.apply(to: &state.config) }
+        return edits.map(AgentEffect.persist) + [apply(state, force: false), .renderMenu]
+    }
+
+    /// The config doesn't keep the mode from before "off", but the curve only moves in Custom mode.
+    // shortcut: a macOS-mode profile whose curve was moved comes back as Custom, and a Custom profile at the default curve comes back as macOS; store the last mode if users notice.
+    private static func onMode(_ pointer: PointerSettings) -> AccelerationMode {
+        guard pointer.acceleration == .off else { return pointer.acceleration }
+        return pointer.curve == PointerSettings().curve ? .system : .custom
     }
 
     private static func apply(_ state: AgentState, force: Bool) -> AgentEffect {
