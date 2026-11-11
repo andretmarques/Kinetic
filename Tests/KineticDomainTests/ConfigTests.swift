@@ -23,6 +23,42 @@ import Testing
         #expect(try decode(#"{"mice":{}}"#).mice["*"] != nil)
     }
 
+    @Test func badMouseEntryDropsOnlyThatEntry() throws {
+        let kept = ["*": MouseProfile(pointer: PointerSettings(speed: 5))]
+        #expect(try decode(#"{"mice":{"*":{"pointer":{"speed":5}},"x":null}}"#).mice == kept)
+        #expect(try decode(#"{"mice":{"*":{"pointer":{"speed":5}},"x":3}}"#).mice == kept)
+    }
+
+    @Test func badKeyboardEntryDropsOnlyThatEntry() throws {
+        let kept = ["k": KeyboardDeviceSettings(swapAltWin: true)]
+        #expect(try decode(#"{"keyboards":{"k":{"swapAltWin":true},"x":null}}"#).keyboards == kept)
+        #expect(try decode(#"{"keyboards":{"k":{"swapAltWin":true},"x":3}}"#).keyboards == kept)
+    }
+
+    @Test func miceThatIsNotADictionaryGivesDefaults() throws {
+        let config = try decode(#"{"mice":3,"keyboards":3}"#)
+        #expect(config.mice == KineticConfig().mice)
+        #expect(config.keyboards.isEmpty)
+    }
+
+    @Test func missingMiceGivesTheAllMiceProfile() throws {
+        #expect(try decode("{}").mice == KineticConfig().mice)
+    }
+
+    @Test func unknownFunctionKeyActionLosesOnlyThatMapping() throws {
+        let config = try decode(#"{"keyboard":{"fKeyOverrides":{"1":{"mute":{}},"2":{"bogus":{}}}}}"#)
+        #expect(config.keyboard.fKeyOverrides == ["1": .mute])
+    }
+
+    @Test func severalProfilesSurviveARoundTrip() throws {
+        var config = KineticConfig()
+        config.mice["mouse:1"] = MouseProfile(pointer: PointerSettings(speed: 3, acceleration: .off), buttons: ["3": .desktopNext])
+        config.mice["mouse:2"] = MouseProfile(scroll: ScrollSettings(reverseVertical: true, linesPerNotch: 4))
+        config.keyboards = ["keyboard:1": KeyboardDeviceSettings(swapAltWin: true), "keyboard:2": KeyboardDeviceSettings(macFunctionKeys: true)]
+        let data = try JSONEncoder().encode(config)
+        #expect(try JSONDecoder().decode(KineticConfig.self, from: data) == config)
+    }
+
     @Test func agentStaysOnUnlessTurnedOff() throws {
         #expect(try decode("{}").agentEnabled)
         #expect(try !decode(#"{"agentEnabled":false}"#).agentEnabled)
