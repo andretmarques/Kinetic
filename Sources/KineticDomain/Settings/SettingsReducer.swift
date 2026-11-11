@@ -142,7 +142,7 @@ public enum SettingsIntent: Sendable {
     case imported(KineticConfig)
     case resetToDefaults
     case failed(String)
-    case registrationFailed(requested: Bool, message: String)
+    case registrationFailed(String)
     case alertDismissed
     case shortcutNamesLoaded([String])
 }
@@ -289,21 +289,18 @@ public enum SettingsReducer: Reducer {
             return apply(.replaceAll(imported), to: &state)
 
         case .resetToDefaults:
-            var fresh = KineticConfig()
-            fresh.onboardingDone = true
-            fresh.agentEnabled = state.config.agentEnabled
-            state.selectedMouseKey = KineticConfig.allMiceKey
-            return apply(.replaceAll(fresh), to: &state)
+            return reduce(&state, .imported(KineticConfig()))
 
         case let .failed(message):
             state.alertMessage = message
             return []
 
-        case let .registrationFailed(requested, message):
+        case let .registrationFailed(message):
             state.alertMessage = message
-            // Waiting for approval in Login Items is still registered, so the switch is already right.
-            guard state.registration != .requiresApproval else { return [] }
-            return apply(.setAgentEnabled(!requested), to: &state)
+            // The switch follows the login item the handler just read; apply, not reduce, so no .setRegistered goes out.
+            let isRegistered = state.registration == .enabled || state.registration == .requiresApproval
+            guard isRegistered != state.config.agentEnabled else { return [] }
+            return apply(.setAgentEnabled(isRegistered), to: &state)
 
         case .alertDismissed:
             state.alertMessage = nil

@@ -203,7 +203,7 @@ import Testing
     @Test func aFailedRegistrationTurnsTheSwitchBackOff() {
         var state = makeState()
         state.registration = .notRegistered
-        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: true, message: "Nope"))
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
         #expect(!state.config.agentEnabled)
         #expect(state.alertMessage == "Nope")
         #expect(effects == [.persist(.setAgentEnabled(false))])
@@ -214,7 +214,7 @@ import Testing
         config.agentEnabled = false
         var state = makeState(config: config)
         state.registration = .enabled
-        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: false, message: "Nope"))
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
         #expect(state.config.agentEnabled)
         #expect(state.alertMessage == "Nope")
         #expect(effects == [.persist(.setAgentEnabled(true))])
@@ -223,10 +223,42 @@ import Testing
     @Test func aRegistrationAwaitingApprovalKeepsTheSwitchOn() {
         var state = makeState()
         state.registration = .requiresApproval
-        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: true, message: "Nope"))
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
         #expect(state.config.agentEnabled)
         #expect(state.alertMessage == "Nope")
         #expect(effects.isEmpty)
+        #expect(state.banner == .needsLoginItemApproval)
+    }
+
+    @Test func aFailureThatLeavesTheLoginItemOffKeepsTheSwitchOff() {
+        var config = KineticConfig()
+        config.agentEnabled = false
+        var state = makeState(config: config)
+        state.registration = .notRegistered
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
+        #expect(!state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects.isEmpty)
+    }
+
+    @Test func aFailureThatLeavesTheLoginItemOnKeepsTheSwitchOn() {
+        var state = makeState()
+        state.registration = .enabled
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
+        #expect(state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects.isEmpty)
+    }
+
+    @Test func aFailureThatLeavesApprovalPendingTurnsTheSwitchOn() {
+        var config = KineticConfig()
+        config.agentEnabled = false
+        var state = makeState(config: config)
+        state.registration = .requiresApproval
+        let effects = SettingsReducer.reduce(&state, .registrationFailed("Nope"))
+        #expect(state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects == [.persist(.setAgentEnabled(true))])
         #expect(state.banner == .needsLoginItemApproval)
     }
 }

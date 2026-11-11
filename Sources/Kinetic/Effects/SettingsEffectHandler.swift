@@ -114,7 +114,7 @@ final class SettingsEffectHandler {
             reportAgentState()
         } catch {
             reportAgentState() // the rollback reads the fresh registration
-            store.send(.registrationFailed(requested: isRegistered, message: "Couldn't change Kinetic Agent: \(error.localizedDescription)"))
+            store.send(.registrationFailed("Couldn't change Kinetic Agent: \(error.localizedDescription)"))
         }
     }
 
