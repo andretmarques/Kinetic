@@ -66,7 +66,7 @@ final class AgentService {
     }
 
     /// Registering soon after an update can keep failing, while a fresh launch a little later works.
-    func relaunchAppIfAllowed(onFailure: @escaping @MainActor () -> Void) -> Bool {
+    func relaunchAppIfAllowed(onFailure: @escaping @MainActor @Sendable () -> Void) -> Bool {
         let defaults = UserDefaults.standard
         let version = installedVersionStamp()
         if defaults.double(forKey: RelaunchKey.version) != version {
