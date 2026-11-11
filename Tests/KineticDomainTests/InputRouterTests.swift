@@ -52,6 +52,11 @@ import Testing
         #expect(route == .passWithFlags(KeyCombo.control | 0x0001))
     }
 
+    @Test func pausedFunctionKeyKeepsTheSubstituteModifier() {
+        let router = RouterDriver()
+        #expect(router.press(f2, flags: rightControlHeld, context(paused: true)) == .pass)
+    }
+
     @Test func releaseFollowsThePressAfterPausing() {
         let router = RouterDriver()
         _ = router.press(f1, context())
@@ -174,6 +179,18 @@ private final class RouterDriver {
         config.keyboards[keyboard.key] = KeyboardDeviceSettings(macFunctionKeys: true)
         #expect(InputRules(config: config, devices: [keyboard]).usesMacFunctionKeys)
         #expect(!InputRules(config: config, devices: []).usesMacFunctionKeys)
+    }
+
+    @Test func activeSubstituteNeedsEnabledRulesAMacKeyboardAndASubstitute() {
+        var config = KineticConfig()
+        config.keyboards[keyboard.key] = KeyboardDeviceSettings(macFunctionKeys: true)
+        #expect(InputRules(config: config, devices: [keyboard]).activeSubstitute == KeyCodes.rightControl)
+        #expect(InputRules(config: config, devices: []).activeSubstitute == nil)
+        config.keyboard.fnSubstitute = .none
+        #expect(InputRules(config: config, devices: [keyboard]).activeSubstitute == nil)
+        config.keyboard.fnSubstitute = .rightControl
+        config.paused = true
+        #expect(InputRules(config: config, devices: [keyboard]).activeSubstitute == nil)
     }
 
     @Test func hiddenDevicesAreIgnored() {

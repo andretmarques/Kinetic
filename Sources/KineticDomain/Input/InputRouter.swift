@@ -66,7 +66,7 @@ public struct InputRouter: Sendable {
             substituteIsDown = false
             return false
         }
-        guard rules.usesMacFunctionKeys, let substitute = rules.substituteKeyCode, keyCode == substitute else {
+        guard let substitute = rules.activeSubstitute, keyCode == substitute else {
             return false
         }
 
@@ -109,7 +109,7 @@ public struct InputRouter: Sendable {
             }
         }
 
-        if substituteHeld, rules.usesMacFunctionKeys, let substitute = rules.substituteKeyCode {
+        if substituteHeld, let substitute = rules.activeSubstitute {
             return (.passWithFlags(ModifierFlags.removingSubstitute(from: flags, keyCode: substitute)), nil)
         }
         return (.pass, nil)

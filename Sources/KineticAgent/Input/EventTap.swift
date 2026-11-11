@@ -54,7 +54,7 @@ final class EventTap: @unchecked Sendable {
     func update(rules: InputRules) {
         let lockCleared = shared.withLock { state in
             state.rules = rules
-            let cleared = state.isLocked && rules.substituteKeyCode == nil
+            let cleared = state.isLocked && rules.activeSubstitute == nil
             if cleared {
                 state.isLocked = false
             }
