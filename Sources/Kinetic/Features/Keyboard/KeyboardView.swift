@@ -209,7 +209,7 @@ private struct FunctionKeyCell: View {
                 .setFKeyOverride(key: key, $0)
             },
             defaultTitle: "Default: \(KeyboardSettings.defaultMacAction(for: key).title)",
-            extraActions: [.passThrough]
+            actions: KineticAction.functionKeyCatalog
         ) {
             VStack(spacing: 4) {
                 Image(systemName: action.symbol)

@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 struct ActionPicker<PickerLabel: View>: View {
     @Binding var selection: KineticAction?
     let defaultTitle: String
-    var extraActions: [KineticAction] = []
+    var actions: [KineticAction] = KineticAction.catalog
     @ViewBuilder let label: () -> PickerLabel
 
     @Environment(SettingsStore.self) private var store
@@ -57,10 +57,10 @@ struct ActionPicker<PickerLabel: View>: View {
 
     @ViewBuilder
     private func section(for category: KineticAction.Category) -> some View {
-        let actions = filteredActions.filter { $0.category == category }
-        if !actions.isEmpty || category == .custom {
+        let rows = filteredActions.filter { $0.category == category }
+        if !rows.isEmpty || category == .custom {
             Section(category.rawValue) {
-                ForEach(actions, id: \.self) { action in
+                ForEach(rows, id: \.self) { action in
                     actionRow(title: action.title, symbol: action.symbol, isSelected: selection == action) {
                         choose(action)
                     }
@@ -115,7 +115,7 @@ struct ActionPicker<PickerLabel: View>: View {
     }
 
     private var filteredActions: [KineticAction] {
-        (KineticAction.catalog + extraActions).filter {
+        actions.filter {
             matches($0.title) || matches($0.category.rawValue)
         }
     }

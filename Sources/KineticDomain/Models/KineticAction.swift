@@ -25,6 +25,9 @@ public enum KineticAction: Codable, Equatable, Hashable, Sendable {
         .none,
     ]
 
+    /// A key press can't hold a mouse button down, so F-keys don't offer the click remaps.
+    public static let functionKeyCatalog = catalog.filter { $0 != .middleClick && $0 != .rightClick } + [.passThrough]
+
     public var category: Category {
         switch self {
         case .desktopPrevious, .desktopNext, .desktop, .missionControl, .appExpose, .showDesktop: .desktops
