@@ -111,10 +111,11 @@ final class SettingsEffectHandler {
     private func setRegistered(_ isRegistered: Bool) {
         do {
             try agent.setRegistered(isRegistered)
+            reportAgentState()
         } catch {
-            store.send(.failed("Couldn't change Kinetic Agent: \(error.localizedDescription)"))
+            reportAgentState() // the rollback reads the fresh registration
+            store.send(.registrationFailed(requested: isRegistered, message: "Couldn't change Kinetic Agent: \(error.localizedDescription)"))
         }
-        reportAgentState()
     }
 
     private func repairAgent(mayRelaunch: Bool, mayRegister: Bool) {

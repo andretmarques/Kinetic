@@ -142,6 +142,7 @@ public enum SettingsIntent: Sendable {
     case imported(KineticConfig)
     case resetToDefaults
     case failed(String)
+    case registrationFailed(requested: Bool, message: String)
     case alertDismissed
     case shortcutNamesLoaded([String])
 }
@@ -283,18 +284,26 @@ public enum SettingsReducer: Reducer {
         case let .imported(config):
             var imported = config
             imported.onboardingDone = true
+            imported.agentEnabled = state.config.agentEnabled // this Mac's login item, not part of the file
             state.selectedMouseKey = KineticConfig.allMiceKey
             return apply(.replaceAll(imported), to: &state)
 
         case .resetToDefaults:
             var fresh = KineticConfig()
             fresh.onboardingDone = true
+            fresh.agentEnabled = state.config.agentEnabled
             state.selectedMouseKey = KineticConfig.allMiceKey
             return apply(.replaceAll(fresh), to: &state)
 
         case let .failed(message):
             state.alertMessage = message
             return []
+
+        case let .registrationFailed(requested, message):
+            state.alertMessage = message
+            // Waiting for approval in Login Items is still registered, so the switch is already right.
+            guard state.registration != .requiresApproval else { return [] }
+            return apply(.setAgentEnabled(!requested), to: &state)
 
         case .alertDismissed:
             state.alertMessage = nil

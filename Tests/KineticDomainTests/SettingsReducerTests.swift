@@ -151,6 +151,84 @@ import Testing
         let effects = SettingsReducer.reduce(&state, .restartAgent)
         #expect(effects.contains(.setRegistered(true)))
     }
+
+    @Test func importingKeepsThisMacsAgentSwitchOn() {
+        var file = KineticConfig()
+        file.agentEnabled = false
+        var state = makeState()
+        let effects = SettingsReducer.reduce(&state, .imported(file))
+        #expect(state.config.agentEnabled)
+        #expect(effects == [.persist(.replaceAll(state.config))])
+    }
+
+    @Test func importingKeepsThisMacsAgentSwitchOff() {
+        var config = KineticConfig()
+        config.agentEnabled = false
+        var state = makeState(config: config)
+        let effects = SettingsReducer.reduce(&state, .imported(KineticConfig()))
+        #expect(!state.config.agentEnabled)
+        #expect(state.banner == .turnedOff)
+        #expect(effects == [.persist(.replaceAll(state.config))])
+    }
+
+    @Test func resettingKeepsATurnedOffAgentOff() {
+        var config = KineticConfig()
+        config.agentEnabled = false
+        var state = makeState(config: config)
+        let effects = SettingsReducer.reduce(&state, .resetToDefaults)
+        #expect(!state.config.agentEnabled)
+        #expect(state.banner == .turnedOff)
+        #expect(effects == [.persist(.replaceAll(state.config))])
+    }
+
+    @Test func importAndResetReplaceEverythingButTheAgentSwitch() {
+        var current = KineticConfig()
+        current.agentEnabled = false
+        var state = makeState(config: current)
+        var file = KineticConfig()
+        file.paused = true
+        file.mice[mouse.key] = MouseProfile(pointer: PointerSettings(speed: 3))
+        var expected = file
+        expected.onboardingDone = true
+        expected.agentEnabled = false
+        #expect(SettingsReducer.reduce(&state, .imported(file)) == [.persist(.replaceAll(expected))])
+        #expect(state.config == expected)
+        var fresh = KineticConfig()
+        fresh.onboardingDone = true
+        fresh.agentEnabled = false
+        #expect(SettingsReducer.reduce(&state, .resetToDefaults) == [.persist(.replaceAll(fresh))])
+        #expect(state.config == fresh)
+    }
+
+    @Test func aFailedRegistrationTurnsTheSwitchBackOff() {
+        var state = makeState()
+        state.registration = .notRegistered
+        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: true, message: "Nope"))
+        #expect(!state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects == [.persist(.setAgentEnabled(false))])
+    }
+
+    @Test func aFailedUnregistrationTurnsTheSwitchBackOn() {
+        var config = KineticConfig()
+        config.agentEnabled = false
+        var state = makeState(config: config)
+        state.registration = .enabled
+        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: false, message: "Nope"))
+        #expect(state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects == [.persist(.setAgentEnabled(true))])
+    }
+
+    @Test func aRegistrationAwaitingApprovalKeepsTheSwitchOn() {
+        var state = makeState()
+        state.registration = .requiresApproval
+        let effects = SettingsReducer.reduce(&state, .registrationFailed(requested: true, message: "Nope"))
+        #expect(state.config.agentEnabled)
+        #expect(state.alertMessage == "Nope")
+        #expect(effects.isEmpty)
+        #expect(state.banner == .needsLoginItemApproval)
+    }
 }
 
 @Suite struct AgentRecoveryTests {
