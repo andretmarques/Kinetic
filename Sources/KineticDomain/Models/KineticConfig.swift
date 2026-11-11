@@ -10,10 +10,6 @@ extension KeyedDecodingContainer {
         let raw = (try? decodeIfPresent([String: Lossy<T>].self, forKey: key)) ?? [:]
         return raw.compactMapValues(\.value)
     }
-
-    func decodeActions(_ key: Key) -> [String: KineticAction] {
-        decodeLossyDictionary(key)
-    }
 }
 
 private struct Lossy<T: Decodable>: Decodable {
@@ -93,7 +89,7 @@ public struct MouseProfile: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         pointer = c.decode(.pointer, or: PointerSettings())
         scroll = c.decode(.scroll, or: ScrollSettings())
-        buttons = c.decodeActions(.buttons)
+        buttons = c.decodeLossyDictionary(.buttons)
     }
 }
 public enum FKeyMode: String, Codable, CaseIterable, Sendable {
@@ -175,7 +171,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         fKeyMode = c.decode(.fKeyMode, or: .mac)
         fnSubstitute = c.decode(.fnSubstitute, or: .rightControl)
-        fKeyOverrides = c.decodeActions(.fKeyOverrides)
+        fKeyOverrides = c.decodeLossyDictionary(.fKeyOverrides)
     }
 }
 public struct KineticConfig: Codable, Equatable, Sendable {
