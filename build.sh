@@ -75,7 +75,8 @@ OPTS=(--force --timestamp=none)
 codesign "${OPTS[@]}" --sign "$SIGN_ID" "$AGENT/Contents/Frameworks/libKineticMenuBar.dylib"
 codesign "${OPTS[@]}" --sign "$SIGN_ID" --identifier com.andremarques.kinetic.agent "$AGENT"
 codesign "${OPTS[@]}" --sign "$SIGN_ID" --identifier com.andremarques.kinetic "$APP"
-codesign --verify --deep --strict "$APP" && echo "✓ signature OK"
+codesign --verify --deep --strict "$APP"
+echo "✓ signature OK"
 
 echo
 echo "Built $APP"
