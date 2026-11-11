@@ -5,15 +5,16 @@ extension KeyedDecodingContainer {
         (try? decodeIfPresent(T.self, forKey: key)) ?? fallback()
     }
 
-    func decodeActions(_ key: Key) -> [String: KineticAction] {
-        let raw = (try? decodeIfPresent([String: LossyAction].self, forKey: key)) ?? [:]
+    /// Drops entries that fail to decode, so one bad entry can't wipe the whole dictionary.
+    func decodeLossyDictionary<T: Decodable>(_ key: Key) -> [String: T] {
+        let raw = (try? decodeIfPresent([String: Lossy<T>].self, forKey: key)) ?? [:]
         return raw.compactMapValues(\.value)
     }
 }
 
-private struct LossyAction: Decodable {
-    let value: KineticAction?
-    init(from decoder: Decoder) throws { value = try? KineticAction(from: decoder) }
+private struct Lossy<T: Decodable>: Decodable {
+    let value: T?
+    init(from decoder: Decoder) throws { value = try? T(from: decoder) }
 }
 public enum AccelerationMode: String, Codable, CaseIterable, Sendable {
     case off, system, custom
@@ -88,7 +89,7 @@ public struct MouseProfile: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         pointer = c.decode(.pointer, or: PointerSettings())
         scroll = c.decode(.scroll, or: ScrollSettings())
-        buttons = c.decodeActions(.buttons)
+        buttons = c.decodeLossyDictionary(.buttons)
     }
 }
 public enum FKeyMode: String, Codable, CaseIterable, Sendable {
@@ -170,7 +171,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         fKeyMode = c.decode(.fKeyMode, or: .mac)
         fnSubstitute = c.decode(.fnSubstitute, or: .rightControl)
-        fKeyOverrides = c.decodeActions(.fKeyOverrides)
+        fKeyOverrides = c.decodeLossyDictionary(.fKeyOverrides)
     }
 }
 public struct KineticConfig: Codable, Equatable, Sendable {
@@ -207,9 +208,9 @@ public struct KineticConfig: Codable, Equatable, Sendable {
         paused = c.decode(.paused, or: d.paused)
         showMenuBarIcon = c.decode(.showMenuBarIcon, or: d.showMenuBarIcon)
         onboardingDone = c.decode(.onboardingDone, or: d.onboardingDone)
-        mice = c.decode(.mice, or: d.mice)
+        mice = c.decodeLossyDictionary(.mice)
         if mice[Self.allMiceKey] == nil { mice[Self.allMiceKey] = MouseProfile() }
-        keyboards = c.decode(.keyboards, or: d.keyboards)
+        keyboards = c.decodeLossyDictionary(.keyboards)
         keyboard = c.decode(.keyboard, or: d.keyboard)
         hiddenDevices = c.decode(.hiddenDevices, or: [])
         agentEnabled = c.decode(.agentEnabled, or: true)
