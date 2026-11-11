@@ -31,6 +31,7 @@ final class SymbolicHotkeys {
     private var cachedAt = Date.distantPast
 
     /// Returns false when there's nothing to send, so the caller can try something else.
+    /// A `.disabled` entry suppresses only the default combo; callers using `fire(...) || fallback` still run the fallback.
     @discardableResult
     func fire(_ hotkey: Hotkey, fallback: KeyCombo?) -> Bool {
         if Date.now.timeIntervalSince(cachedAt) > Self.cacheLifetime {

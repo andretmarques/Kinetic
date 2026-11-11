@@ -2,7 +2,7 @@
 public enum SymbolicHotkeyBinding: Equatable, Sendable {
     case combo(KeyCombo)
     case doubleTap(keyCode: UInt16, mask: UInt64)
-    /// Turned off in System Settings: nothing should fire, not even the default shortcut.
+    /// Turned off in System Settings: suppresses only the default key combo. Callers that use `fire(...) || fallback` still run their fallback.
     case disabled
 
     private static let modifierMask = KeyCombo.shift | KeyCombo.control | KeyCombo.option | KeyCombo.command | KeyCombo.fn

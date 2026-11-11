@@ -20,6 +20,11 @@ import Testing
         #expect(SymbolicHotkeyBinding(plistEntry: offAsInt) == .disabled)
     }
 
+    @Test func flagOnlyTurnedOffEntryIsDisabled() {
+        let entry: [String: Any] = ["enabled": false]
+        #expect(SymbolicHotkeyBinding(plistEntry: entry) == .disabled)
+    }
+
     @Test func unreadableEntryIsNil() {
         let noFlag: [String: Any] = ["value": ["parameters": [65535, 123, 262144], "type": "standard"]]
         #expect(SymbolicHotkeyBinding(plistEntry: noFlag) == nil)
