@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 struct ActionPicker<PickerLabel: View>: View {
     @Binding var selection: KineticAction?
     let defaultTitle: String
-    var extraActions: [KineticAction] = []
+    var actions: [KineticAction] = KineticAction.catalog
     @ViewBuilder let label: () -> PickerLabel
 
     @Environment(SettingsStore.self) private var store
@@ -115,7 +115,7 @@ struct ActionPicker<PickerLabel: View>: View {
     }
 
     private var filteredActions: [KineticAction] {
-        (KineticAction.catalog + extraActions).filter {
+        actions.filter {
             matches($0.title) || matches($0.category.rawValue)
         }
     }

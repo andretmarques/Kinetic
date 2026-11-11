@@ -24,16 +24,10 @@ final class SymbolicHotkeys {
         }
     }
 
-    private enum Binding {
-        case combo(KeyCombo)
-        case doubleTap(keyCode: CGKeyCode, mask: UInt64)
-    }
-
     private static let cacheLifetime: TimeInterval = 30
     private static let doubleTapDelay: TimeInterval = 0.08
-    private static let modifierMask = KeyCombo.shift | KeyCombo.control | KeyCombo.option | KeyCombo.command | KeyCombo.fn
 
-    private var cache: [Int: Binding] = [:]
+    private var cache: [Int: SymbolicHotkeyBinding] = [:]
     private var cachedAt = Date.distantPast
 
     /// Returns false when there's nothing to send, so the caller can try something else.
@@ -50,6 +44,8 @@ final class SymbolicHotkeys {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.doubleTapDelay) {
                 EventPoster.tapModifier(keyCode: keyCode, mask: mask)
             }
+        case .disabled:
+            return false
         case nil:
             guard let fallback else { return false }
             EventPoster.press(fallback)
@@ -62,41 +58,9 @@ final class SymbolicHotkeys {
         let defaults = UserDefaults(suiteName: "com.apple.symbolichotkeys")
         let entries = defaults?.dictionary(forKey: "AppleSymbolicHotKeys") ?? [:]
         cache = entries.reduce(into: [:]) { result, entry in
-            if let id = Int(entry.key), let binding = Self.binding(from: entry.value) {
+            if let id = Int(entry.key), let binding = SymbolicHotkeyBinding(plistEntry: entry.value) {
                 result[id] = binding
             }
-        }
-    }
-
-    private static func binding(from entry: Any) -> Binding? {
-        guard
-            let entry = entry as? [String: Any],
-            (entry["enabled"] as? Bool) ?? (entry["enabled"] as? Int == 1),
-            let value = entry["value"] as? [String: Any],
-            let parameters = value["parameters"] as? [Int]
-        else {
-            return nil
-        }
-
-        if value["type"] as? String == "modifier",
-           let mask = parameters.first,
-           let keyCode = modifierKeyCode(mask: mask) {
-            return .doubleTap(keyCode: keyCode, mask: UInt64(mask))
-        }
-        guard parameters.count >= 3, (0..<0xFFFF).contains(parameters[1]), parameters[2] >= 0 else {
-            return nil
-        }
-        return .combo(KeyCombo(keyCode: UInt16(parameters[1]), modifiers: UInt64(parameters[2]) & modifierMask))
-    }
-
-    private static func modifierKeyCode(mask: Int) -> CGKeyCode? {
-        switch UInt64(mask) {
-        case KeyCombo.shift: 56
-        case KeyCombo.control: 59
-        case KeyCombo.option: 58
-        case KeyCombo.command: 55
-        case KeyCombo.fn: 63
-        default: nil
         }
     }
 }

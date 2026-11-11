@@ -39,6 +39,8 @@ final class ActionRunner: @unchecked Sendable {
         case .desktopNext:
             return hotkeys.fire(.moveRightASpace, fallback: arrow(KeyCodes.rightArrow))
         case let .desktop(number):
+            // System Settings only has "Switch to Desktop" 1 to 16; other numbers would hit other shortcuts' ids.
+            guard (1...16).contains(number) else { return false }
             return hotkeys.fire(.switchToDesktop(number), fallback: nil)
         case .missionControl:
             return hotkeys.fire(.missionControl, fallback: arrow(KeyCodes.upArrow))
@@ -96,7 +98,10 @@ final class ActionRunner: @unchecked Sendable {
             SystemOpener.open(bundleIdentifier: bundleID)
         case let .runShortcut(name):
             shortcuts.run(name)
-        case .middleClick, .rightClick, .none, .passThrough:
+        case .middleClick, .rightClick:
+            // Mouse buttons are remapped by the event tap; only a key can get here, and it can't hold a click.
+            return false
+        case .none, .passThrough:
             break
         }
         return true
