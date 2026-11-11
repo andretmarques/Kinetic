@@ -127,7 +127,7 @@ private struct FunctionKeysSection: View {
         let scope = "Applies to every keyboard, including Fn+F-keys on your Mac's own keyboard, because macOS doesn't say which keyboard a key came from."
         let reach = substitute == .none
             ? "Choose a key above to reach the other mode."
-            : "The Fn key on PC keyboards never reaches macOS, so hold \(substitute.title) instead; double-tap it to flip the mode until you double-tap again."
+            : "The Fn key on PC keyboards never reaches macOS, so hold \(substitute.title) instead; double-tap it to flip the mode until you double-tap again, pause Kinetic, or the Mac-F-key keyboard disconnects."
         return "\(scope) \(reach) Click a key to change what it does."
     }
 }

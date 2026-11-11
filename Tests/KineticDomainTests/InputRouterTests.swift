@@ -13,7 +13,8 @@ import Testing
         substitute: FnSubstitute = .rightControl,
         button: KineticAction? = nil,
         learning: Bool = false,
-        locked: Bool = false
+        locked: Bool = false,
+        keyboardPresent: Bool = true
     ) -> InputContext {
         var config = KineticConfig()
         config.paused = paused
@@ -26,7 +27,7 @@ import Testing
             config.mice["*"]?.buttons["3"] = button
         }
         return InputContext(
-            rules: InputRules(config: config, devices: [keyboard]),
+            rules: InputRules(config: config, devices: keyboardPresent ? [keyboard] : []),
             isLearning: learning,
             isLocked: locked
         )
@@ -112,6 +113,24 @@ import Testing
         #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 10, context: rules))
         #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: 0, now: 10.05, context: rules))
         #expect(router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 10.1, context: rules))
+    }
+
+    @Test func releaseWhileTheKeyboardIsGoneDoesNotLeaveTheKeyDown() {
+        let router = RouterDriver()
+        _ = router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 10, context: context())
+        _ = router.routeFlags(keyCode: KeyCodes.rightControl, flags: 0, now: 10.05, context: context(keyboardPresent: false))
+        let rules = context()
+        #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 20, context: rules))
+        #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: 0, now: 20.05, context: rules))
+        #expect(router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 20.1, context: rules))
+    }
+
+    @Test func pausedDoubleTapDoesNotFlip() {
+        let router = RouterDriver()
+        let rules = context(paused: true)
+        #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 10, context: rules))
+        #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: 0, now: 10.05, context: rules))
+        #expect(!router.routeFlags(keyCode: KeyCodes.rightControl, flags: rightControlHeld, now: 10.1, context: rules))
     }
 
     @Test func slowTapsDoNotFlip() {
