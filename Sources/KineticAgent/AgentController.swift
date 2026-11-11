@@ -19,7 +19,7 @@ final class AgentController {
     private let keySwapper: KeySwapper
     private let wakeMonitor = WakeMonitor()
     private let menuBar: MenuBarModule?
-    private let removalCheck = AppRemovalCheck()
+    private var removalCheck = AppRemovalCheck()
 
     private var observers: [NSObjectProtocol] = []
     private var statusTimer: Timer?
@@ -84,6 +84,13 @@ final class AgentController {
     /// launchd only restarts the agent after a crash, so the normal exit this leads to stops it for good.
     private func observeAppRemoval() {
         if removalCheck.isAppRemoved {
+            store.send(.appRemoved)
+        }
+    }
+
+    /// Replacing the app can look like a removal for one sample, so the timer waits for a second.
+    private func confirmAppRemoval() {
+        if removalCheck.isConfirmedRemoved() {
             store.send(.appRemoved)
         }
     }
@@ -201,7 +208,7 @@ final class AgentController {
     private func startStatusTimer() {
         let timer = Timer(timeInterval: Self.statusCheckInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.observeAppRemoval()
+                self?.confirmAppRemoval()
                 self?.tap.reviveIfDisabled()
                 self?.observeStatus()
             }

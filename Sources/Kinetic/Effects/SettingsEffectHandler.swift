@@ -119,7 +119,7 @@ final class SettingsEffectHandler {
     }
 
     private func repairAgent(mayRelaunch: Bool, mayRegister: Bool) {
-        if mayRelaunch && agent.relaunchAppIfAllowed() {
+        if mayRelaunch && agent.relaunchAppIfAllowed(onFailure: { [store] in store.send(.repairFinished(didRegister: false)) }) {
             return
         }
         guard mayRegister else {

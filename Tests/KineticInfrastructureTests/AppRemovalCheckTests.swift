@@ -40,4 +40,25 @@ import Testing
         #expect(!isRemoved(launch: installed, current: trashed, existing: [installed, trashed]))
         #expect(!isRemoved(launch: installed, current: nil, existing: [installed]))
     }
+
+    @Test func oneRemovedSampleIsNotConfirmed() {
+        var check = AppRemovalCheck()
+        let confirmed = check.confirm(true)
+        #expect(!confirmed)
+    }
+
+    @Test func twoRemovedSamplesInARowConfirm() {
+        var check = AppRemovalCheck()
+        _ = check.confirm(true)
+        let confirmed = check.confirm(true)
+        #expect(confirmed)
+    }
+
+    @Test func aPresentSampleResetsConfirmation() {
+        var check = AppRemovalCheck()
+        _ = check.confirm(true)
+        _ = check.confirm(false)
+        let confirmed = check.confirm(true)
+        #expect(!confirmed)
+    }
 }

@@ -66,7 +66,7 @@ final class AgentService {
     }
 
     /// Registering soon after an update can keep failing, while a fresh launch a little later works.
-    func relaunchAppIfAllowed() -> Bool {
+    func relaunchAppIfAllowed(onFailure: @escaping @MainActor @Sendable () -> Void) -> Bool {
         let defaults = UserDefaults.standard
         let version = installedVersionStamp()
         if defaults.double(forKey: RelaunchKey.version) != version {
@@ -86,9 +86,14 @@ final class AgentService {
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
+            let didOpen = error == nil
             DispatchQueue.main.async {
-                NSApp.terminate(nil)
+                if didOpen {
+                    NSApp.terminate(nil)
+                } else {
+                    onFailure()
+                }
             }
         }
         return true
