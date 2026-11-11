@@ -34,6 +34,11 @@ public struct InputRules: Equatable, Sendable {
         }
     }
 
+    /// The substitute key while it does anything: nil when paused, when no keyboard uses Mac F-keys, or when there is none.
+    public var activeSubstitute: UInt16? {
+        isEnabled && usesMacFunctionKeys ? substituteKeyCode : nil
+    }
+
     func functionKeysAreMac(substituteHeld: Bool, locked: Bool) -> Bool {
         var isMac = functionKeyMode == .mac
         if substituteHeld {

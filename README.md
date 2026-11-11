@@ -119,7 +119,7 @@ Each external keyboard gets its own switches:
 
 Click any key in the grid to give it a different action. F-key settings apply to every keyboard, including Fn+F-keys on your Mac's own, because macOS doesn't say which keyboard a key came from.
 
-**Need a real F5?** A PC keyboard's Fn key never reaches macOS, so hold **Right Control** to get the other mode, or choose a different key under **Hold for the other mode**. Double-tap that key to flip the mode until you double-tap it again. You can also make standard F1–F12 the default under **F-keys do**.
+**Need a real F5?** A PC keyboard's Fn key never reaches macOS, so hold **Right Control** to get the other mode, or choose a different key under **Hold for the other mode**. Double-tap that key to flip the mode until you double-tap it again, pause Kinetic, or the Mac-F-key keyboard disconnects. You can also make standard F1–F12 the default under **F-keys do**.
 
 ### General
 

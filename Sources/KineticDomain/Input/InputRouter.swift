@@ -62,13 +62,11 @@ public struct InputRouter: Sendable {
     /// Returns whether a double-tap just flipped the F-key mode.
     public mutating func routeFlags(keyCode: UInt16, flags: UInt64, now: TimeInterval, context: InputContext) -> Bool {
         let rules = context.rules
-        guard rules.isEnabled else {
+        guard let substitute = rules.activeSubstitute else {
             substituteIsDown = false
             return false
         }
-        guard rules.usesMacFunctionKeys, let substitute = rules.substituteKeyCode, keyCode == substitute else {
-            return false
-        }
+        guard keyCode == substitute else { return false }
 
         let isDown = flags & ModifierFlags.rightBit(for: substitute) != 0
         defer { substituteIsDown = isDown }
@@ -98,7 +96,8 @@ public struct InputRouter: Sendable {
         }
 
         let rules = context.rules
-        let substituteHeld = rules.substituteKeyCode.map { flags & ModifierFlags.rightBit(for: $0) != 0 } ?? false
+        let activeSubstitute = rules.activeSubstitute
+        let substituteHeld = activeSubstitute.map { flags & ModifierFlags.rightBit(for: $0) != 0 } ?? false
 
         if isDown {
             if !isRepeat {
@@ -109,7 +108,7 @@ public struct InputRouter: Sendable {
             }
         }
 
-        if substituteHeld, rules.usesMacFunctionKeys, let substitute = rules.substituteKeyCode {
+        if substituteHeld, let substitute = activeSubstitute {
             return (.passWithFlags(ModifierFlags.removingSubstitute(from: flags, keyCode: substitute)), nil)
         }
         return (.pass, nil)
