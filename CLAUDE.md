@@ -20,8 +20,8 @@ A macOS 26 app that makes a PC mouse and keyboard feel native on the Mac ([READM
 ## Commands
 
 - Test: `swift test`. On a Mac with Command Line Tools and no Xcode, the macro plugins are not found, so run `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing`.
-- Build the app: `./build.sh` (debug, this Mac's architecture) or `./build.sh release` (universal). Output is `build/Kinetic.app` ([build.sh](build.sh)). Open it only when André asks: it has the installed app's bundle id, so it replaces the running agent and uses his live settings.
-- Release, only when André asks: `Scripts/release.sh <version>` pushes `main` and a tag, and CI then publishes a public DMG. Read the header of [Scripts/release.sh](Scripts/release.sh) first: the notes file it needs must already be on `main`.
+- Build the app: `./build.sh` (debug, this Mac's architecture) or `./build.sh release` (universal). Output is `build/Kinetic.app` ([build.sh](build.sh)). Open it only when the user asks: it has the installed app's bundle id, so it replaces the running agent and uses the user's live settings.
+- Release, only when the user asks: `Scripts/release.sh <version>` pushes `main` and a tag, and CI then publishes a public DMG. Read the header of [Scripts/release.sh](Scripts/release.sh) first: the notes file it needs must already be on `main`.
 
 ## Status
 
