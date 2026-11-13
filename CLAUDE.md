@@ -14,6 +14,7 @@ A macOS 26 app that makes a PC mouse and keyboard feel native on the Mac ([READM
 | Tests | `KineticDomainTests`, `KineticInfrastructureTests` | [Tests](Tests) |
 | `Scripts/` | `release.sh` publishes a version; `make-icon.swift` renders the app icon | [Scripts](Scripts) |
 | `Packaging/` | The Info.plists, the agent's launch plist and the icon that `build.sh` copies into the app | [Packaging](Packaging) |
+| `Branding/` | Icon sources (SVG layers), the 1024 px icon, the menu bar glyph and the README animation | [Branding](Branding) |
 | `ReleaseNotes/` | One file per release, named after its version (the tag without a leading `v`) | [ReleaseNotes](ReleaseNotes) |
 | CI | Tests and builds every push to `main`; a release tag also publishes the DMG | [.github/workflows/build.yml](.github/workflows/build.yml) |
 
