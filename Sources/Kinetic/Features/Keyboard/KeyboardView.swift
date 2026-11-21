@@ -110,6 +110,12 @@ private struct FunctionKeysSection: View {
 
             FunctionKeyGrid()
 
+            if state.status.secureInputOn {
+                Label(state.config.secureInputWarning(fnLocked: state.status.fnLocked), systemImage: "lock.fill")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+            }
+
             if state.status.fnLocked {
                 Label("F-keys are flipped right now. Double-tap \(substitute.title) to undo it.", systemImage: "exclamationmark.triangle")
                     .font(.callout)

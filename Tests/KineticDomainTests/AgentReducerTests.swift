@@ -65,7 +65,7 @@ import Testing
 
     @Test func statusIsOnlyPublishedWhenItChanges() {
         var state = AgentState(config: KineticConfig())
-        let observed = AgentIntent.statusObserved(accessibility: true, inputMonitoring: true, tapActive: true, fnLocked: false)
+        let observed = AgentIntent.statusObserved(accessibility: true, inputMonitoring: true, tapActive: true, fnLocked: false, secureInputOn: false)
         let effects = AgentReducer.reduce(&state, observed)
         #expect(effects.contains(.publish(state.status)))
         let secondEffects = AgentReducer.reduce(&state, observed)

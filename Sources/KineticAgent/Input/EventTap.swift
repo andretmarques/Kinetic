@@ -19,7 +19,7 @@ final class EventTap: @unchecked Sendable {
     private static let retryInterval: TimeInterval = 2
     private static let eventMask: CGEventMask = [
         CGEventType.scrollWheel, .otherMouseDown, .otherMouseUp, .otherMouseDragged, .keyDown, .keyUp, .flagsChanged,
-    ].reduce(0) { $0 | (1 << $1.rawValue) }
+    ].reduce(0) { $0 | (1 << $1.rawValue) } | (1 << 14) // NX_SYSDEFINED, where media keys arrive
 
     private let actions: ActionRunner
     private let shared = OSAllocatedUnfairLock(initialState: Shared())
@@ -150,6 +150,8 @@ final class EventTap: @unchecked Sendable {
             handleFlags(event, context: context)
         case .scrollWheel where context.rules.isEnabled:
             rewriteScroll(event, rules: context.rules)
+        case SystemEvent.type:
+            return handleSystemEvent(event, context: context)
         default:
             break
         }
@@ -205,6 +207,27 @@ final class EventTap: @unchecked Sendable {
             event.flags = CGEventFlags(rawValue: flags)
         }
         return Unmanaged.passUnretained(event)
+    }
+
+    private func handleSystemEvent(_ event: CGEvent, context: InputContext) -> Unmanaged<CGEvent>? {
+        guard
+            let subtypeField = SystemEvent.subtypeField,
+            let data1Field = SystemEvent.data1Field,
+            event.getIntegerValueField(subtypeField) == SystemEvent.mediaKeySubtype
+        else {
+            return Unmanaged.passUnretained(event)
+        }
+        let data1 = event.getIntegerValueField(data1Field)
+        let route = router.routeMediaKey(
+            type: Int((data1 >> 16) & 0xFFFF),
+            isDown: (data1 >> 8) & 0xFF == 0x0A,
+            flags: CGEventSource.flagsState(.combinedSessionState).rawValue,
+            context: context
+        )
+        guard case let .asFunctionKey(code, isDown, flags) = route else { return Unmanaged.passUnretained(event) }
+        // Bit 0 marks a held key's repeats; real F-key events carry the fn flag.
+        EventPoster.key(code, isDown: isDown, isRepeat: data1 & 1 != 0, flags: flags | KeyCombo.fn)
+        return nil
     }
 
     private func handleFlags(_ event: CGEvent, context: InputContext) {

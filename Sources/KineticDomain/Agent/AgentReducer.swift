@@ -5,6 +5,7 @@ public struct AgentState: Equatable, Sendable {
     public var inputMonitoringGranted = false
     public var tapActive = false
     public var fnLocked = false
+    public var secureInputOn = false
     public var publishedStatus: AgentStatus?
 
     public init(config: KineticConfig) {
@@ -17,7 +18,8 @@ public struct AgentState: Equatable, Sendable {
             accessibilityGranted: accessibilityGranted,
             inputMonitoringGranted: inputMonitoringGranted,
             devices: devices,
-            fnLocked: fnLocked
+            fnLocked: fnLocked,
+            secureInputOn: secureInputOn
         )
     }
 
@@ -42,14 +44,14 @@ public enum AgentIntent: Sendable {
     case configLoaded(KineticConfig)
     case devicesChanged([DeviceInfo])
     case reapplyRequested
-    case statusObserved(accessibility: Bool, inputMonitoring: Bool, tapActive: Bool, fnLocked: Bool)
+    case statusObserved(accessibility: Bool, inputMonitoring: Bool, tapActive: Bool, fnLocked: Bool, secureInputOn: Bool)
     case permissionRequested(Permission)
     case appRemoved
     case menu(MenuBarCommand)
 }
 
 public enum AgentEffect: Equatable, Sendable {
-    case applySettings(KineticConfig, keyboards: [DeviceInfo], rules: InputRules, force: Bool)
+    case applySettings(KineticConfig, keyboards: [KeyboardMapping], rules: InputRules, force: Bool)
     case scheduleReapply
     case publish(AgentStatus)
     case persist(ConfigEdit)
@@ -82,13 +84,18 @@ public enum AgentReducer: Reducer {
         case .reapplyRequested:
             return [apply(state, force: true)]
 
-        case let .statusObserved(accessibility, inputMonitoring, tapActive, fnLocked):
+        case let .statusObserved(accessibility, inputMonitoring, tapActive, fnLocked, secureInputOn):
             state.accessibilityGranted = accessibility
             state.inputMonitoringGranted = inputMonitoring
-            let menuChanged = state.tapActive != tapActive || state.fnLocked != fnLocked
+            let lockChanged = state.fnLocked != fnLocked
+            let menuChanged = state.tapActive != tapActive || lockChanged || state.secureInputOn != secureInputOn
             state.tapActive = tapActive
             state.fnLocked = fnLocked
-            return (menuChanged ? [.renderMenu] : []) + publishIfChanged(&state)
+            state.secureInputOn = secureInputOn
+            // The F-key remap lives in the keyboard's HID mapping, so flipping the mode has to rewrite it.
+            return (lockChanged ? [apply(state, force: false)] : [])
+                + (menuChanged ? [.renderMenu] : [])
+                + publishIfChanged(&state)
 
         case let .permissionRequested(permission):
             return [.requestPermission(permission)]
@@ -140,7 +147,9 @@ public enum AgentReducer: Reducer {
     }
 
     private static func apply(_ state: AgentState, force: Bool) -> AgentEffect {
-        let keyboards = state.devices.filter { $0.kind == .keyboard && state.config.isEnabled($0) }
+        let keyboards = state.devices
+            .filter { $0.kind == .keyboard && state.config.isEnabled($0) }
+            .map { KeyboardMapping(device: $0, config: state.config, fnLocked: state.fnLocked) }
         return .applySettings(state.config, keyboards: keyboards, rules: state.inputRules, force: force)
     }
 

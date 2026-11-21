@@ -13,6 +13,13 @@ public enum KeyRoute: Equatable, Sendable {
     case passWithFlags(UInt64)
 }
 
+/// What to do with a media key event, which is what an F-key sends once its Mac action lives in the keyboard's HID mapping.
+public enum MediaKeyRoute: Equatable, Sendable {
+    case pass
+    /// Swallow the media event and post this F-key instead.
+    case asFunctionKey(code: UInt16, isDown: Bool, flags: UInt64)
+}
+
 public enum InputCommand: Equatable, Sendable {
     case run(KineticAction)
     case reportButton(Int)
@@ -38,6 +45,7 @@ public struct InputRouter: Sendable {
     private var heldButtons: [Int: ButtonRoute] = [:]
     private var swallowedKeys: Set<UInt16> = []
     private var substituteIsDown = false
+    private var convertedMediaKeys: [Int: UInt16] = [:]
     private var lastSubstituteTap: TimeInterval = 0
 
     public init() {}
@@ -114,8 +122,42 @@ public struct InputRouter: Sendable {
         return (.pass, nil)
     }
 
+    /// Holding the substitute asks for the standard F-key, but a HID-mapped F-key reaches the tap as a media key.
+    /// The press and its release are converted together, even if the substitute is let go in between.
+    /// shortcut: a media event doesn't say which key sent it, so a real media key pressed with the substitute held is
+    /// converted too, and two F-keys with the same action both post the lower one. Fixing it needs per-device events.
+    public mutating func routeMediaKey(type: Int, isDown: Bool, flags: UInt64, context: InputContext) -> MediaKeyRoute {
+        let substitute = context.rules.activeSubstitute
+        let cleanFlags = substitute.map { ModifierFlags.removingSubstitute(from: flags, keyCode: $0) } ?? flags
+
+        guard isDown else {
+            guard let code = convertedMediaKeys.removeValue(forKey: type) else { return .pass }
+            return .asFunctionKey(code: code, isDown: false, flags: cleanFlags)
+        }
+        lastSubstituteTap = 0
+        if let code = convertedMediaKeys[type] {
+            return .asFunctionKey(code: code, isDown: true, flags: cleanFlags)
+        }
+
+        let rules = context.rules
+        guard
+            let substitute,
+            flags & ModifierFlags.rightBit(for: substitute) != 0,
+            rules.functionKeysAreMac(substituteHeld: false, locked: context.isLocked),
+            let action = KineticAction(mediaKeyType: type),
+            let functionKey = (1...12).first(where: { rules.functionKeyActions[$0] == action }),
+            let code = KeyCodes.functionKeys.first(where: { $0.value == functionKey })?.key
+        else {
+            return .pass
+        }
+        convertedMediaKeys[type] = code
+        return .asFunctionKey(code: code, isDown: true, flags: cleanFlags)
+    }
+
     public mutating func tapWasReenabled() {
         substituteIsDown = false
+        // A release may have been lost while the tap was off.
+        convertedMediaKeys.removeAll()
     }
 
     private func decideButton(_ button: Int, context: InputContext) -> (ButtonRoute, InputCommand?) {

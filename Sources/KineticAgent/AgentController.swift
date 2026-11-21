@@ -1,4 +1,5 @@
 import ApplicationServices
+import Carbon.HIToolbox
 import Foundation
 import KineticDomain
 import KineticInfrastructure
@@ -16,7 +17,7 @@ final class AgentController {
     private let tap: EventTap
     private let deviceMonitor = DeviceMonitor()
     private let pointer: PointerApplier
-    private let keySwapper: KeySwapper
+    private let keyMapper: KeyMapper
     private let wakeMonitor = WakeMonitor()
     private let menuBar: MenuBarModule?
     private var removalCheck = AppRemovalCheck()
@@ -31,7 +32,7 @@ final class AgentController {
         menuBar = config.showMenuBarIcon ? MenuBarModule() : nil
         tap = EventTap(actions: actions)
         pointer = PointerApplier(directory: repository.directory)
-        keySwapper = KeySwapper(directory: repository.directory)
+        keyMapper = KeyMapper(directory: repository.directory)
     }
 
     /// Never returns: the main thread goes to AppKit if the menu bar is loaded, or a plain run loop if not.
@@ -77,7 +78,7 @@ final class AgentController {
 
     private func quit() {
         pointer.restore()
-        keySwapper.restore()
+        keyMapper.restore()
         exit(EXIT_SUCCESS)
     }
 
@@ -136,7 +137,7 @@ final class AgentController {
         switch effect {
         case let .applySettings(config, keyboards, rules, force):
             pointer.apply(config: config, force: force)
-            keySwapper.apply(config: config, keyboards: keyboards, force: force)
+            keyMapper.apply(config: config, keyboards: keyboards, force: force)
             tap.update(rules: rules)
         case .scheduleReapply:
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.reapplyDelay) { [weak self] in
@@ -224,7 +225,8 @@ final class AgentController {
                 accessibility: AXIsProcessTrusted(),
                 inputMonitoring: CGPreflightListenEventAccess(),
                 tapActive: tap.isActive,
-                fnLocked: tap.isLocked
+                fnLocked: tap.isLocked,
+                secureInputOn: IsSecureEventInputEnabled()
             )
         )
     }

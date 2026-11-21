@@ -11,16 +11,6 @@ final class ActionRunner: @unchecked Sendable {
         case play = 16, next = 17, previous = 18
     }
 
-    /// `NX_SYSDEFINED` events aren't covered by CGEvent's public fields. These match what
-    /// AppKit's NSEvent writes for the media keys, byte for byte.
-    private enum SystemEvent {
-        static let type = CGEventType(rawValue: 14)
-        static let subtypeField = CGEventField(rawValue: 83)
-        static let data1Field = CGEventField(rawValue: 149)
-        static let data2Field = CGEventField(rawValue: 150)
-        static let mediaKeySubtype: Int64 = 8
-    }
-
     private static let arrowModifiers = KeyCombo.control | KeyCombo.fn
 
     private let hotkeys = SymbolicHotkeys()

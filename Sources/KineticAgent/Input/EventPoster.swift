@@ -1,6 +1,16 @@
 import CoreGraphics
 import KineticDomain
 
+/// `NX_SYSDEFINED` events aren't covered by CGEvent's public fields. These match what
+/// AppKit's NSEvent writes for the media keys, byte for byte.
+enum SystemEvent {
+    static let type = CGEventType(rawValue: 14)
+    static let subtypeField = CGEventField(rawValue: 83)
+    static let data1Field = CGEventField(rawValue: 149)
+    static let data2Field = CGEventField(rawValue: 150)
+    static let mediaKeySubtype: Int64 = 8
+}
+
 /// Everything Kinetic synthesizes carries `tag`, so the event tap lets it pass instead of remapping it again.
 enum EventPoster {
     static let tag: Int64 = 0x4B4E_5443
@@ -23,6 +33,13 @@ enum EventPoster {
         up.flags = flags
         post(down)
         post(up)
+    }
+
+    static func key(_ keyCode: CGKeyCode, isDown: Bool, isRepeat: Bool, flags: UInt64) {
+        guard let event = CGEvent(keyboardEventSource: makeSource(), virtualKey: keyCode, keyDown: isDown) else { return }
+        event.flags = CGEventFlags(rawValue: flags)
+        event.setIntegerValueField(.keyboardEventAutorepeat, value: isRepeat ? 1 : 0)
+        post(event)
     }
 
     static func tapModifier(keyCode: CGKeyCode, mask: UInt64) {
