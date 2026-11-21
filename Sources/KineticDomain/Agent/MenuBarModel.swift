@@ -42,7 +42,7 @@ public struct MenuBarModel: Codable, Equatable, Sendable {
             statusText = "Kinetic is paused"
         } else if state.tapActive {
             health = .good
-            statusText = "Kinetic is active"
+            statusText = state.secureInputOn ? "Secure Input is on" : "Kinetic is active"
         } else {
             health = .problem
             statusText = "Needs permissions"
